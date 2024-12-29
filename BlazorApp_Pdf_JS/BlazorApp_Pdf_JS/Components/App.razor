@@ -16,6 +16,53 @@
 <body>
     <Routes />
     <script src="_framework/blazor.web.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script type="text/javascript">
+        window.generatePdf = (htmlContent, fileName) => {
+            var element = document.createElement('div');
+            element.innerHTML = htmlContent;
+            html2pdf().from(element).set({
+                margin: 10,
+                filename: fileName,
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).save();
+        };
+
+        // window.readPdf = async (pdfDataUrl) => {
+        //     const pdf = await pdfjsLib.getDocument(pdfDataUrl).promise;
+        //     let textContent = "";
+        //     for (let i = 1; i <= pdf.numPages; i++) {
+        //         const page = await pdf.getPage(i);
+        //         const text = await page.getTextContent();
+        //         text.items.forEach((item) => {
+        //             textContent += item.str + " ";
+        //         });
+        //     }
+        //     return textContent;
+        // };
+
+        window.readPdf = async (pdfDataUrl) => {
+            const pdf = await pdfjsLib.getDocument(pdfDataUrl).promise;
+            let textContent = "";
+
+            // Loop through each page of the PDF
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const text = await page.getTextContent();
+
+                // Iterate over the extracted items (text)
+                text.items.forEach((item) => {
+                    textContent += item.str + " ";
+                });
+            }
+            console.log(textContent);
+            return textContent;
+        };
+
+    </script>
 </body>
 
 </html>

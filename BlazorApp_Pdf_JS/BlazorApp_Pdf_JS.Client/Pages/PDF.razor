@@ -1,0 +1,39 @@
+﻿@* @page "/pdf"
+@inject IJSRuntime JS
+@rendermode InteractiveWebAssembly
+<h3>Generate and Read PDF</h3>
+
+<h4>Generate PDF</h4>
+<button @onclick="GeneratePdf">Generate PDF</button>
+
+<h4>Read PDF</h4>
+<input type="file" @onchange="ReadPdfFile" />
+<p>@pdfContent</p>
+
+@code {
+    private string pdfContent = string.Empty;
+
+    private async Task GeneratePdf()
+    {
+        var htmlContent = "<h1>Hello, Blazor PDF</h1><p>This is dynamically generated.</p>";
+        await JS.InvokeVoidAsync("generatePdf", htmlContent, "generated.pdf");
+    }
+
+    private async Task ReadPdfFile(ChangeEventArgs e)
+    {
+        var file = (e.Value as Microsoft.AspNetCore.Components.Forms.IBrowserFile);
+        if (file != null)
+        {
+            using (var stream = file.OpenReadStream())
+            using (var memoryStream = new MemoryStream())
+            {
+                await stream.CopyToAsync(memoryStream);
+                var base64 = Convert.ToBase64String(memoryStream.ToArray());
+                var pdfDataUrl = $"data:application/pdf;base64,{base64}";
+
+                pdfContent = await JS.InvokeAsync<string>("readPdf", pdfDataUrl);
+            }
+        }
+    }
+}
+ *@
