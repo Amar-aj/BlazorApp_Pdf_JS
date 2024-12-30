@@ -1,0 +1,96 @@
+﻿@page "/excel"
+@using BlazorApp_Pdf_JS.Models
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+
+<h4>Generate Excel</h4>
+<button @onclick="GenerateExcel">Generate Excel</button>
+
+
+<h3>Read Excel</h3>
+
+<InputFile OnChange="HandleFileSelected" MaxFileSize="10485760" />  <!-- 10 MB -->
+@if (questionMSAModels.Any())
+{
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Question</th>
+                <th>Option 1</th>
+                <th>Option 2</th>
+                <th>Option 3</th>
+                <th>Option 4</th>
+                <th>Correct Option</th>
+                <th>Duration (Minutes)</th>
+                <th>Marks</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in questionMSAModels)
+            {
+                <tr>
+                    <td>@item.Question</td>
+                    <td>@item.Option1</td>
+                    <td>@item.Option2</td>
+                    <td>@item.Option3</td>
+                    <td>@item.Option4</td>
+                    <td>@item.CorrectOption</td>
+                    <td>@item.DurationInMinitus</td>
+                    <td>@item.Marks</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No questions available.</p>
+}
+
+
+<h4>Generate Excel From Table</h4>
+<button @onclick="GenerateExcelFromJsom">Generate Excel From JSON</button>
+
+
+
+
+@code {
+    private string excelContent = string.Empty;
+    List<QuestionMSAModel> questionMSAModels = new List<QuestionMSAModel>();
+
+    private async Task GenerateExcel()
+    {
+        await JS.InvokeVoidAsync("generateExcel", "generated_excel.xlsx");
+    }
+    private async Task GenerateExcelFromJsom()
+    {
+        await JS.InvokeVoidAsync("generateExcelFromJson", questionMSAModels.ToArray(), "generated_excel.xlsx");
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var files = e.File;
+        const int chunkSize = 512000; // 500 KB chunks
+
+        if (files != null)
+        {
+            var buffer = new byte[chunkSize];
+            int bytesRead;
+            using (var stream = files.OpenReadStream(long.MaxValue))
+            using (var memoryStream = new MemoryStream())
+            {
+                while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                {
+                    await memoryStream.WriteAsync(buffer, 0, bytesRead);
+                }
+
+                var base64 = Convert.ToBase64String(memoryStream.ToArray());
+
+                questionMSAModels = await JS.InvokeAsync<List<QuestionMSAModel>>("readExcelFile", base64);
+                StateHasChanged();
+            }
+        }
+    }
+
+
+}

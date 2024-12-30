@@ -17,7 +17,7 @@
 
     private async Task GeneratePdf()
     {
-        var htmlContent = "<h1>Hello, Blazor PDF</h1><p>This is dynamically generated.</p>";
+        var htmlContent = "<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<h1>Hello, Blazor PDF</h1><p>This is dynamically generated.</p></p>";
         await JS.InvokeVoidAsync("generatePdf", htmlContent, "generated.pdf");
     }
 

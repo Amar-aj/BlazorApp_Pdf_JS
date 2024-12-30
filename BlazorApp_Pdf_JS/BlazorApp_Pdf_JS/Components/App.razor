@@ -18,6 +18,12 @@
     <script src="_framework/blazor.web.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- use xlsx.full.min.js from version 0.20.3 -->
+    @* <script lang="javascript" src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script> *@
+
+    <script async
+            defer
+            src="https://cdn.jsdelivr.net/npm/transliteration@2.1.8/dist/browser/bundle.umd.min.js"></script>
 
     <script type="text/javascript">
         window.generatePdf = (htmlContent, fileName) => {
@@ -45,23 +51,134 @@
         // };
 
         window.readPdf = async (pdfDataUrl) => {
-            const pdf = await pdfjsLib.getDocument(pdfDataUrl).promise;
-            let textContent = "";
+                   const pdf = await pdfjsLib.getDocument({ url: pdfDataUrl }).promise;
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'path/to/pdf.worker.js';
+                pdfjsLib.cMapUrl = 'path/to/cmaps/';
+                pdfjsLib.cMapPacked = true;
 
-            // Loop through each page of the PDF
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const text = await page.getTextContent();
+                   let textContent = "";
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const text = await page.getTextContent();
+            text.items.forEach((item) => {
+                // Attempt to decode with different encodings
+                let decodedStr;
+                const encodings = ['utf-8', 'utf-16', 'windows-1252', 'iso-8859-1', 'Shift_JIS']; // Add more encodings as needed
+                for (const encoding of encodings) {
+                    try {
+                        const encoder = new TextEncoder();
+                        const encoded = encoder.encode(item.str);
+                        const decoder = new TextDecoder(encoding);
+                        decodedStr = decoder.decode(encoded);
+                        break;
+                    } catch (error) {
+                        // Continue to the next encoding if decoding fails
+                    }
+                }
+                textContent += decodedStr + " ";
+            });
+        }
 
-                // Iterate over the extracted items (text)
-                text.items.forEach((item) => {
-                    textContent += item.str + " ";
-                });
-            }
-            console.log(textContent);
+        // console.log(transliterate(textContent, { to: 'odia' }));
+        getOdiaText(textContent);
             return textContent;
         };
 
+
+        function getOdiaText(inputText){
+            console.log("---Running")
+            console.log(transliterate('你好'));
+        const odiaText = transliterate(inputText, { to: 'odia' });
+
+        console.log(odiaText);
+                }
+
+
+    </script>
+
+
+
+    <script type="module">
+        window.generateExcel = async (fileName) => {
+          /* dynamically import the script in the event listener */
+          const XLSX = await import("./scripts/xlsx.mjs");
+          const wb = XLSX.utils.book_new();
+          const ws = XLSX.utils.aoa_to_sheet([["a","b","c"],[1,2,3]]);
+          XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+          XLSX.writeFile(wb, fileName);
+        }
+         window.generateExcelFromJson = async (data,fileName, ) => {
+          /* dynamically import the script in the event listener */
+          const XLSX = await import("./scripts/xlsx.mjs");
+
+              // Ensure SheetJS (xlsx) library is loaded
+        if (typeof XLSX === "undefined") {
+            console.error("XLSX library is not loaded.");
+            return;
+        }
+
+        try {
+            // Define headers for the Excel sheet
+            const headers = [
+                "Question",
+                "Option1",
+                "Option2",
+                "Option3",
+                "Option4",
+                "CorrectOption",
+                "DurationInMinitus",
+                "Marks"
+            ];
+
+            // Map the JSON data to a format suitable for SheetJS
+            const rows = data.map(item => ({
+                "Question": item.question,
+                "Option1": item.option1,
+                "Option2": item.option2,
+                "Option3": item.option3,
+                "Option4": item.option4,
+                "CorrectOption": item.correctOption,
+                "DurationInMinitus": item.durationInMinitus,
+                "Marks": item.marks
+            }));
+
+            // Combine headers and rows
+            const sheetData = [headers, ...rows.map(Object.values)];
+
+            // Create a worksheet and workbook
+            const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Questions");
+
+            // Write the workbook to a file
+            XLSX.writeFile(workbook, fileName);
+        } catch (error) {
+            console.error("Error generating Excel file:", error);
+        }
+
+        }
+
+        window.readExcelFile = async (base64) => {
+            const XLSX = await import("./scripts/xlsx.mjs");
+            return new Promise((resolve, reject) => {
+            try {
+                const binary = atob(base64);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
+                }
+
+                const workbook = XLSX.read(bytes, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet);
+
+                resolve(json);
+            } catch (error) {
+                reject(error);
+            }
+        });
+        };
     </script>
 </body>
 
